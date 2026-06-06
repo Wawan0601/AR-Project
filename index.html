@@ -275,12 +275,16 @@
 
 <!-- 
   JAVASCRIPT — Urutan load PENTING:
-  1. html5-qrcode  → TANPA defer, harus siap sebelum scanner.js
-  2. database.js   → load data.json (source of truth)
-  3. scanner.js    → depend on html5-qrcode
-  4. ui.js         → depend on DOM elements
-  5. app.js        → orchestrator, depend on semua di atas
+  1. Supabase SDK  → client database online
+  2. supabase-config.js → kredensial (isi dulu sebelum deploy!)
+  3. html5-qrcode  → TANPA defer, harus siap sebelum scanner.js
+  4. database.js   → Single Source of Truth (Supabase edition)
+  5. scanner.js    → depend on html5-qrcode
+  6. ui.js         → depend on DOM elements
+  7. app.js        → orchestrator
 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./js/supabase-config.js"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="./js/database.js"></script>
 <script src="./js/scanner.js"></script>
