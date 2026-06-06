@@ -82,15 +82,17 @@ const Database = (() => {
    */
   async function update(barcode, updates) {
     const client = _getClient();
-    const { data, error } = await client
+    // Hapus barcode dari updates — tidak boleh update primary key
+    const safeUpdates = { ...updates };
+    delete safeUpdates.barcode;
+
+    const { error } = await client
       .from(SUPABASE_CONFIG.tableName)
-      .update(updates)
-      .eq('barcode', barcode)
-      .select()
-      .single();
+      .update(safeUpdates)
+      .eq('barcode', barcode);
 
     if (error) throw new Error('Gagal update produk: ' + error.message);
-    return data;
+    return true;
   }
 
   /**
