@@ -17,7 +17,7 @@ const SUPABASE_URL =
 "https://abcd1234.supabase.co";
 
 const SUPABASE_KEY =
-"eyJhbGc...";     // contoh: eyJhbGci...
+"eyJhbGc...";
 
   // Nama bucket Storage untuk file .glb dan foto produk
   storageBucket: 'produk-assets',
