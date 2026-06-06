@@ -126,6 +126,9 @@ function openAddModal() {
   hideCurrentAsset('model');
   hideCurrentAsset('poster');
   document.getElementById('poster-preview').classList.add('hidden');
+  document.getElementById('poster-preview-img').src = '';
+  document.getElementById('form-model-file').value = '';
+  document.getElementById('form-poster-file').value = '';
 
   showModal('modal-overlay');
 }
@@ -159,9 +162,7 @@ function openEditModal(id) {
 
   if (p.poster_url) {
     showCurrentAsset('poster', p.poster_url);
-    const img = document.getElementById('poster-preview-img');
-    img.src = p.poster_url;
-    document.getElementById('poster-preview').classList.remove('hidden');
+    document.getElementById('poster-preview').classList.add('hidden');
   } else {
     hideCurrentAsset('poster');
     document.getElementById('poster-preview').classList.add('hidden');
@@ -174,13 +175,16 @@ function openEditModal(id) {
 function showCurrentAsset(type, url) {
   const el = document.getElementById(`current-${type}-url`);
   const link = document.getElementById(`current-${type}-link`);
+  if (!el || !link) return;
   el.style.display = 'flex';
   link.href = url;
-  link.textContent = url.split('/').pop().substring(0, 40) + (url.length > 40 ? '...' : '');
+  const filename = url.split('/').pop();
+  link.textContent = filename.length > 40 ? filename.substring(0, 40) + '...' : filename;
 }
 
 function hideCurrentAsset(type) {
-  document.getElementById(`current-${type}-url`).style.display = 'none';
+  const el = document.getElementById(`current-${type}-url`);
+  if (el) el.style.display = 'none';
 }
 
 // ===================== FORM SUBMIT =====================
