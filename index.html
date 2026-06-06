@@ -2,322 +2,295 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin — AR Produk</title>
-  <link rel="stylesheet" href="../css/style.css" />
-  <link rel="stylesheet" href="./css/admin.css" />
-</head>
-<body class="admin-body">
-<div id="admin-app">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#F5F0EA" />
+  <meta name="description" content="Scan barcode produk dan lihat visualisasi 3D dalam Augmented Reality" />
+  
+  <!-- PWA Manifest — pakai path relatif agar bekerja di GitHub Pages subfolder -->
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./assets/icon-192.png" />
 
-  <!-- HEADER -->
-  <header class="admin-header">
-    <div class="admin-header-left">
-      <div class="header-logo">
-        <span>AR Produk</span>
-        <span>Panel Admin</span>
-      </div>
+  <title>AR Produk — Scan & Visualisasi 3D</title>
+
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="./css/style.css" />
+
+  <!-- 
+    LIBRARY EKSTERNAL
+    ================================================================
+    1. html5-qrcode  : Barcode/QR scanner via browser camera
+    2. model-viewer  : Google Web Component untuk 3D & AR viewer
+    ================================================================
+  -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+</head>
+
+<body>
+<div id="app">
+
+  <!-- ===================== HEADER ===================== -->
+  <header class="header">
+    <div class="header-logo">
+      <span>AR Produk</span>
+      <span>Scan · Visualisasi 3D</span>
     </div>
-    <div class="admin-header-right">
-      <a href="../index.html" class="btn-back-app">
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-        Kembali ke App
-      </a>
-    </div>
+    <span class="header-badge">Beta</span>
   </header>
 
-  <!-- CONFIG WARNING (muncul jika belum dikonfigurasi) -->
-  <div id="config-warning" class="config-warning hidden">
-    <div class="config-warning-inner">
-      <div class="warning-icon">⚠️</div>
-      <h2>Supabase Belum Dikonfigurasi</h2>
-      <p>Edit file <code>js/supabase-config.js</code> dan isi URL & API Key Supabase Anda.</p>
-      <a href="#setup-guide" class="btn-warning-guide">Lihat Panduan Setup ↓</a>
+  <!-- ===================== MAIN ===================== -->
+  <main>
+
+    <!-- === SCANNER CARD === -->
+    <div class="scanner-card" id="scanner-card">
+      <div class="scanner-header">
+        <div class="scanner-step">1</div>
+        <div>
+          <div class="scanner-title">Scan Barcode</div>
+          <div class="scanner-subtitle">Arahkan kamera ke barcode produk</div>
+        </div>
+      </div>
+
+      <!-- Viewport Kamera -->
+      <div id="scanner-viewport">
+        <!-- html5-qrcode akan inject video ke sini -->
+        <div id="qr-reader"></div>
+
+        <!-- Viewfinder overlay (kotak sudut + garis scan) -->
+        <div class="viewfinder">
+          <div class="viewfinder-box">
+            <div class="viewfinder-corner tl"></div>
+            <div class="viewfinder-corner tr"></div>
+            <div class="viewfinder-corner bl"></div>
+            <div class="viewfinder-corner br"></div>
+            <div class="scan-line"></div>
+          </div>
+        </div>
+
+        <!-- Hint text bawah -->
+        <div class="scanner-hint">Posisikan barcode di dalam kotak</div>
+
+        <!-- Idle state (sebelum kamera dibuka) -->
+        <div class="scanner-idle" id="scanner-idle">
+          <div class="idle-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+              <circle cx="12" cy="13" r="3"/>
+            </svg>
+          </div>
+          <p class="idle-text">Kamera belum aktif.<br>Klik tombol di bawah untuk mulai scan.</p>
+        </div>
+      </div>
+
+      <!-- Input Manual Barcode -->
+      <div class="manual-input-area">
+        <input 
+          type="text" 
+          id="manual-input" 
+          class="manual-input" 
+          placeholder="Atau ketik kode barcode..."
+          inputmode="numeric"
+          maxlength="30"
+        />
+        <button class="btn-manual" id="btn-manual-search">Cari</button>
+      </div>
     </div>
-  </div>
 
-  <main class="admin-main">
+    <!-- === STATUS BAR === -->
+    <div id="status-bar" class="status-bar hidden"></div>
 
-    <!-- STATS ROW -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-number" id="stat-total">—</div>
-        <div class="stat-label">Total Produk</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number" id="stat-with-model">—</div>
-        <div class="stat-label">Punya Model 3D</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-number" id="stat-with-poster">—</div>
-        <div class="stat-label">Punya Foto</div>
-      </div>
-    </div>
+    <!-- === TOMBOL MULAI SCAN === -->
+    <button class="btn-start-scanner" id="btn-start-scanner">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/>
+        <circle cx="12" cy="13" r="3"/>
+      </svg>
+      Mulai Scan Barcode
+    </button>
 
-    <!-- TOOLBAR -->
-    <div class="admin-toolbar">
-      <div class="toolbar-left">
-        <input type="text" id="search-input" class="search-input" placeholder="Cari nama / barcode..." />
+    <!-- === PRODUCT CARD (muncul setelah scan berhasil) === -->
+    <div class="product-card hidden" id="product-card">
+      
+      <!-- Poster Image -->
+      <div style="position:relative; overflow:hidden;">
+        <img id="product-poster" class="product-poster hidden" alt="Foto produk" loading="lazy" />
+        <div class="product-poster-placeholder" id="poster-placeholder">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#D9D2C9" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </div>
       </div>
-      <div class="toolbar-right">
-        <button class="btn-primary" id="btn-tambah-produk">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Tambah Produk
+
+      <div class="product-info">
+        <!-- Tag barcode -->
+        <div class="product-barcode-tag" id="product-barcode-tag">Barcode: —</div>
+
+        <!-- Nama produk -->
+        <h2 class="product-name" id="product-name">—</h2>
+
+        <!-- Deskripsi -->
+        <p class="product-desc" id="product-desc">—</p>
+
+        <!-- Meta chips -->
+        <div class="product-meta">
+          <div class="meta-chip">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            <span id="product-dimensi">—</span>
+          </div>
+          <div class="meta-chip">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span id="product-berat">—</span>
+          </div>
+        </div>
+
+        <!-- Harga -->
+        <div class="product-price" id="product-price">—</div>
+
+        <!-- Tombol AR -->
+        <button class="btn-ar" id="btn-ar">
+          <div class="ar-dot"></div>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+          </svg>
+          Lihat di Ruangan Anda (AR)
+        </button>
+
+        <!-- Tombol 3D Viewer fallback -->
+        <button class="btn-3d-viewer" id="btn-3d-viewer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          Lihat 3D Saja (tanpa AR)
         </button>
       </div>
     </div>
 
-    <!-- PRODUCT TABLE -->
-    <div class="table-card">
-      <div id="table-loading" class="table-loading">
-        <div class="loading-spinner-lg"></div>
-        <p>Memuat data produk...</p>
+    <!-- === SCAN LAGI BUTTON === -->
+    <button class="btn-scan-again hidden" id="btn-scan-again">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Scan Produk Lain
+    </button>
+
+    <!-- === MODEL VIEWER SECTION === -->
+    <div class="viewer-section hidden" id="viewer-section">
+      <div class="viewer-header">
+        <div class="viewer-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          <span id="viewer-product-name">Model 3D</span>
+        </div>
+        <button class="btn-close-viewer" id="btn-close-viewer" aria-label="Tutup viewer">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
-      <div id="table-empty" class="table-empty hidden">
-        <div style="font-size:48px;">📦</div>
-        <p>Belum ada produk.</p>
-        <button class="btn-primary" id="btn-tambah-empty">Tambah Produk Pertama</button>
-      </div>
-      <div id="table-wrapper" class="table-wrapper hidden">
-        <table class="product-table">
-          <thead>
-            <tr>
-              <th>Produk</th>
-              <th>Barcode</th>
-              <th>Dimensi</th>
-              <th>Harga</th>
-              <th>Aset</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="product-tbody"></tbody>
-        </table>
+
+      <!-- 
+        Model Viewer Web Component
+        - ar: aktifkan mode AR
+        - ar-modes: urutan fallback (webxr → scene-viewer Android → quick-look iOS)
+        - camera-controls: izinkan putar model dengan jari
+        - auto-rotate: putar otomatis saat idle
+        - shadow-intensity: bayangan di lantai
+      -->
+      <model-viewer
+        id="model-viewer"
+        src=""
+        alt="Model 3D Produk"
+        ar
+        ar-modes="webxr scene-viewer quick-look"
+        ar-scale="fixed"
+        camera-controls
+        auto-rotate
+        auto-rotate-delay="1000"
+        shadow-intensity="1.2"
+        shadow-softness="0.8"
+        exposure="1"
+        style="--poster-color: transparent;"
+      >
+        <!-- Tombol AR (muncul di dalam model-viewer) -->
+        <button slot="ar-button" style="
+          position: absolute;
+          bottom: 16px;
+          right: 16px;
+          background: #1A1714;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          padding: 10px 16px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        ">
+          📱 Buka di AR
+        </button>
+
+        <!-- Loading indicator -->
+        <div slot="progress-bar" style="
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: #EDE8E1;
+        ">
+          <div style="height: 100%; background: #C8590A; transition: width 0.3s;" 
+               id="model-progress-bar"></div>
+        </div>
+      </model-viewer>
+
+      <div class="viewer-instructions">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Geser untuk putar · Cubit untuk zoom · Klik "Buka di AR" untuk mode AR
       </div>
     </div>
 
-    <!-- SETUP GUIDE -->
-    <div class="setup-guide" id="setup-guide">
-      <h2 class="guide-title">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Panduan Setup Supabase (Lakukan Sekali)
-      </h2>
-      <div class="guide-steps">
-        <div class="guide-step">
-          <div class="step-num">1</div>
-          <div class="step-body">
-            <strong>Buat akun Supabase</strong>
-            <p>Buka <a href="https://supabase.com" target="_blank">supabase.com</a> → Sign up gratis dengan GitHub.</p>
-          </div>
+    <!-- === HELPER: KODE BARCODE CONTOH === -->
+    <div class="helper-section">
+      <div class="helper-title">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Coba dengan kode contoh (tap untuk mengisi)
+      </div>
+      <div class="helper-codes">
+        <div class="helper-code" data-barcode="8901234567890">
+          <span>8901234567890</span>
+          <span class="helper-code-name">Kursi Estetik Minimalis</span>
         </div>
-        <div class="guide-step">
-          <div class="step-num">2</div>
-          <div class="step-body">
-            <strong>Buat project baru</strong>
-            <p>Klik "New Project" → beri nama → pilih region Asia (Singapore) → set password database → Create.</p>
-          </div>
+        <div class="helper-code" data-barcode="8909876543210">
+          <span>8909876543210</span>
+          <span class="helper-code-name">Meja Kopi Bulat</span>
         </div>
-        <div class="guide-step">
-          <div class="step-num">3</div>
-          <div class="step-body">
-            <strong>Buat tabel <code>produk</code></strong>
-            <p>Buka menu <strong>Table Editor</strong> → "New Table" → nama tabel: <code>produk</code>. Lalu tambah kolom berikut:</p>
-            <div class="code-block">
-id          → uuid, primary key, default: gen_random_uuid()<br>
-barcode     → text, NOT NULL, unique<br>
-nama        → text, NOT NULL<br>
-deskripsi   → text<br>
-dimensi     → text<br>
-berat       → text<br>
-harga       → text<br>
-model_url   → text<br>
-poster_url  → text<br>
-created_at  → timestamptz, default: now()
-            </div>
-          </div>
-        </div>
-        <div class="guide-step">
-          <div class="step-num">4</div>
-          <div class="step-body">
-            <strong>Buat Storage Bucket</strong>
-            <p>Buka menu <strong>Storage</strong> → "New Bucket" → nama: <code>produk-assets</code> → centang <strong>Public bucket</strong> → Create.</p>
-          </div>
-        </div>
-        <div class="guide-step">
-          <div class="step-num">5</div>
-          <div class="step-body">
-            <strong>Aktifkan Row Level Security (RLS) — opsional tapi direkomendasikan</strong>
-            <p>Di Table Editor → tabel <code>produk</code> → RLS → Enable. Lalu tambah policy: <code>Allow all for anon</code> untuk SELECT, INSERT, UPDATE, DELETE. (Untuk production, batasi hanya SELECT untuk publik.)</p>
-          </div>
-        </div>
-        <div class="guide-step">
-          <div class="step-num">6</div>
-          <div class="step-body">
-            <strong>Isi <code>js/supabase-config.js</code></strong>
-            <p>Buka <strong>Settings → API</strong> di Supabase. Copy:</p>
-            <div class="code-block">
-url: 'https://xxxx.supabase.co'<br>
-anonKey: 'eyJhbGci...'
-            </div>
-            <p>Paste ke file <code>js/supabase-config.js</code> di repo GitHub Anda.</p>
-          </div>
-        </div>
-        <div class="guide-step">
-          <div class="step-num">7</div>
-          <div class="step-body">
-            <strong>Deploy ulang ke GitHub</strong>
-            <p>Commit & push perubahan → GitHub Pages otomatis update dalam ~30 detik.</p>
-          </div>
+        <div class="helper-code" data-barcode="1234567890128">
+          <span>1234567890128</span>
+          <span class="helper-code-name">Lampu Meja Bambu</span>
         </div>
       </div>
     </div>
 
   </main>
-</div>
 
-<!-- ========== MODAL TAMBAH/EDIT PRODUK ========== -->
-<div class="modal-overlay hidden" id="modal-overlay">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 class="modal-title" id="modal-title">Tambah Produk</h3>
-      <button class="btn-close-modal" id="btn-close-modal">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <form id="product-form" autocomplete="off">
-        <input type="hidden" id="form-id" />
+  <!-- ===================== FOOTER ===================== -->
+  <footer>
+    <p>Web AR Scanner v1.0 · MVP Prototipe · Gratis & Open Source</p>
+    <p style="margin-top:4px; font-size:11px;">Memerlukan Chrome (Android) atau Safari (iOS) · HTTPS wajib</p>
+  </footer>
 
-        <!-- Barcode -->
-        <div class="form-group">
-          <label class="form-label">Barcode <span class="required">*</span></label>
-          <input type="text" id="form-barcode" class="form-input" placeholder="cth: 8901234567890" required inputmode="numeric" />
-          <span class="form-hint">Harus sama persis dengan barcode fisik pada produk</span>
-        </div>
+</div><!-- #app -->
 
-        <!-- Nama -->
-        <div class="form-group">
-          <label class="form-label">Nama Produk <span class="required">*</span></label>
-          <input type="text" id="form-nama" class="form-input" placeholder="cth: Kursi Estetik Minimalis" required />
-        </div>
-
-        <!-- Deskripsi -->
-        <div class="form-group">
-          <label class="form-label">Deskripsi</label>
-          <textarea id="form-deskripsi" class="form-textarea" rows="3" placeholder="Deskripsi singkat produk..."></textarea>
-        </div>
-
-        <!-- Dimensi & Berat -->
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Dimensi</label>
-            <input type="text" id="form-dimensi" class="form-input" placeholder="cth: 60×60×85 cm" />
-          </div>
-          <div class="form-group">
-            <label class="form-label">Berat</label>
-            <input type="text" id="form-berat" class="form-input" placeholder="cth: 8 kg" />
-          </div>
-        </div>
-
-        <!-- Harga -->
-        <div class="form-group">
-          <label class="form-label">Harga</label>
-          <input type="text" id="form-harga" class="form-input" placeholder="cth: Rp 1.250.000" />
-        </div>
-
-        <div class="form-divider">
-          <span>Aset File</span>
-        </div>
-
-        <!-- Upload Model 3D -->
-        <div class="form-group">
-          <label class="form-label">Model 3D (.glb)</label>
-          <div class="file-upload-area" id="model-upload-area">
-            <input type="file" id="form-model-file" accept=".glb" class="file-input" />
-            <div class="file-upload-content" id="model-upload-content">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-              <span>Klik untuk pilih file .glb</span>
-              <span class="file-hint">Maks 50MB · Format .glb</span>
-            </div>
-          </div>
-          <!-- Preview URL model yang sudah ada -->
-          <div class="current-asset" id="current-model-url" style="display:none">
-            <span class="asset-label">Model saat ini:</span>
-            <a id="current-model-link" href="#" target="_blank" class="asset-link">Lihat file</a>
-            <button type="button" class="btn-remove-asset" id="btn-remove-model">Hapus</button>
-          </div>
-          <div class="upload-progress hidden" id="model-upload-progress">
-            <div class="progress-bar"><div class="progress-fill" id="model-progress-fill"></div></div>
-            <span id="model-progress-text">Mengupload...</span>
-          </div>
-        </div>
-
-        <!-- Upload Foto Poster -->
-        <div class="form-group">
-          <label class="form-label">Foto Produk (poster)</label>
-          <div class="file-upload-area" id="poster-upload-area">
-            <input type="file" id="form-poster-file" accept="image/*" class="file-input" />
-            <div class="file-upload-content" id="poster-upload-content">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <span>Klik untuk pilih foto</span>
-              <span class="file-hint">JPG, PNG, WebP · Maks 5MB</span>
-            </div>
-          </div>
-          <!-- Foto saat ini (saat edit) -->
-          <div class="current-asset" id="current-poster-url" style="display:none">
-            <span class="asset-label">Foto saat ini:</span>
-            <a id="current-poster-link" href="#" target="_blank" class="asset-link">Lihat foto</a>
-            <button type="button" class="btn-remove-asset" id="btn-remove-poster">Hapus</button>
-          </div>
-          <!-- Preview foto baru yang dipilih -->
-          <div class="poster-preview hidden" id="poster-preview">
-            <img id="poster-preview-img" src="" alt="Preview" />
-          </div>
-          <div class="upload-progress hidden" id="poster-upload-progress">
-            <div class="progress-bar"><div class="progress-fill" id="poster-progress-fill"></div></div>
-            <span id="poster-progress-text">Mengupload...</span>
-          </div>
-        </div>
-
-        <!-- Error message -->
-        <div class="form-error hidden" id="form-error"></div>
-
-        <!-- Actions -->
-        <div class="modal-footer">
-          <button type="button" class="btn-cancel" id="btn-cancel-modal">Batal</button>
-          <button type="submit" class="btn-primary" id="btn-submit-form">
-            <span id="btn-submit-text">Simpan Produk</span>
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- ========== MODAL KONFIRMASI HAPUS ========== -->
-<div class="modal-overlay hidden" id="delete-modal-overlay">
-  <div class="modal modal-sm">
-    <div class="modal-header">
-      <h3 class="modal-title">Hapus Produk?</h3>
-    </div>
-    <div class="modal-body">
-      <p>Produk <strong id="delete-product-name"></strong> akan dihapus permanen beserta filenya.</p>
-      <p style="font-size:13px; color:var(--text-secondary); margin-top:8px;">Tindakan ini tidak bisa dibatalkan.</p>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-cancel" id="btn-cancel-delete">Batal</button>
-      <button class="btn-danger" id="btn-confirm-delete">Ya, Hapus</button>
-    </div>
-  </div>
-</div>
-
-<!-- TOAST NOTIFICATION -->
-<div class="toast hidden" id="toast"></div>
-
-<!-- Scripts -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="../js/supabase-config.js"></script>
-<script src="../js/database.js"></script>
-<script src="./js/admin.js"></script>
+<!-- 
+  JAVASCRIPT — Urutan load PENTING:
+  1. database.js  → load data.json (source of truth)
+  2. scanner.js   → depend on html5-qrcode (CDN)
+  3. ui.js        → depend on DOM elements
+  4. app.js       → orchestrator, depend on semua di atas
+-->
+<script src="./js/database.js"></script>
+<script src="./js/scanner.js"></script>
+<script src="./js/ui.js"></script>
+<script src="./js/app.js"></script>
 
 </body>
 </html>
