@@ -13,17 +13,15 @@
  * (anon key aman untuk public, tapi tetap jaga RLS di Supabase)
  */
 
-const SUPABASE_URL =
-"https://abcd1234.supabase.co";
-
-const SUPABASE_KEY =
-"eyJhbGc...";
+const SUPABASE_CONFIG = {
+  url: 'https://abcd1234.supabase.co',      // contoh: https://abcdefgh.supabase.co
+  anonKey: 'eyJhbGc...',     // contoh: eyJhbGci...
 
   // Nama bucket Storage untuk file .glb dan foto produk
   storageBucket: 'produk-assets',
 
   // Nama tabel di database Supabase
-  tableName: 'produk'
+  tableName: 'produk',
 };
 
 // Freeze agar tidak ada yang tidak sengaja mengubahnya
