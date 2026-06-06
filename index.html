@@ -15,14 +15,7 @@
   <!-- Stylesheet -->
   <link rel="stylesheet" href="./css/style.css" />
 
-  <!-- 
-    LIBRARY EKSTERNAL
-    ================================================================
-    1. html5-qrcode  : Barcode/QR scanner via browser camera
-    2. model-viewer  : Google Web Component untuk 3D & AR viewer
-    ================================================================
-  -->
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
+  <!-- model-viewer tetap di head karena type="module" (non-blocking) -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
 </head>
 
@@ -282,11 +275,17 @@
 
 <!-- 
   JAVASCRIPT — Urutan load PENTING:
-  1. database.js  → load data.json (source of truth)
-  2. scanner.js   → depend on html5-qrcode (CDN)
-  3. ui.js        → depend on DOM elements
-  4. app.js       → orchestrator, depend on semua di atas
+  1. Supabase SDK  → client database online
+  2. supabase-config.js → kredensial (isi dulu sebelum deploy!)
+  3. html5-qrcode  → TANPA defer, harus siap sebelum scanner.js
+  4. database.js   → Single Source of Truth (Supabase edition)
+  5. scanner.js    → depend on html5-qrcode
+  6. ui.js         → depend on DOM elements
+  7. app.js        → orchestrator
 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./js/supabase-config.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="./js/database.js"></script>
 <script src="./js/scanner.js"></script>
 <script src="./js/ui.js"></script>
