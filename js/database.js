@@ -1,60 +1,161 @@
 /**
- * database.js — Single Source of Truth
- * Semua data produk diambil dari data.json.
+ * database.js — Single Source of Truth (Supabase Edition)
+ * Menggantikan data.json dengan Supabase sebagai backend.
  *
- * FIX: Gunakan path relatif yang benar untuk GitHub Pages subfolder.
- * document.currentScript tidak bisa dipakai di defer, jadi kita
- * deteksi base path dari window.location secara otomatis.
+ * Semua modul lain (app.js, ui.js) TIDAK BERUBAH —
+ * hanya file ini yang tahu tentang Supabase.
  */
 
 const Database = (() => {
-  let _products = null;
+  let _supabase = null;
 
   /**
-   * Deteksi base URL otomatis — bekerja di Vercel, GitHub Pages subfolder,
-   * maupun localhost tanpa perlu konfigurasi manual.
+   * Inisialisasi Supabase client (lazy — hanya sekali)
    */
-  function _getBaseUrl() {
-    // Ambil path folder dari URL yang sedang dibuka
-    // Contoh: https://wawan0601.github.io/AR-Project/index.html
-    //   → base = https://wawan0601.github.io/AR-Project/
-    const scripts = document.getElementsByTagName('script');
-    for (const s of scripts) {
-      if (s.src && s.src.includes('database.js')) {
-        // database.js ada di /js/database.js → naik 1 level ke root
-        return s.src.replace('/js/database.js', '/');
-      }
+  function _getClient() {
+    if (_supabase) return _supabase;
+
+    if (!SUPABASE_CONFIG.url || SUPABASE_CONFIG.url.includes('GANTI')) {
+      throw new Error('Supabase belum dikonfigurasi. Isi SUPABASE_CONFIG di js/supabase-config.js');
     }
-    // Fallback: pakai lokasi halaman saat ini
-    return window.location.href.replace(/\/[^/]*$/, '/');
+
+    _supabase = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+    console.log('[DB] Supabase client siap.');
+    return _supabase;
   }
 
-  async function load() {
-    if (_products) return _products;
-    try {
-      const base = _getBaseUrl();
-      const url = base + 'data.json';
-      console.log('[DB] Fetching:', url);
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`Gagal memuat data.json: ${response.status}`);
-      _products = await response.json();
-      console.log(`[DB] Loaded ${Object.keys(_products).length} produk.`);
-      return _products;
-    } catch (err) {
-      console.error('[DB] Error:', err);
-      throw err;
-    }
-  }
-
+  /**
+   * Cari produk berdasarkan barcode
+   * @param {string} barcode
+   * @returns {object|null}
+   */
   async function findByBarcode(barcode) {
-    const data = await load();
-    const trimmed = String(barcode).trim();
-    return data[trimmed] || null;
+    const client = _getClient();
+    const { data, error } = await client
+      .from(SUPABASE_CONFIG.tableName)
+      .select('*')
+      .eq('barcode', String(barcode).trim())
+      .maybeSingle();
+
+    if (error) {
+      console.error('[DB] findByBarcode error:', error.message);
+      throw new Error('Gagal mencari produk: ' + error.message);
+    }
+
+    return data || null;
   }
 
+  /**
+   * Ambil semua produk (untuk halaman admin)
+   */
   async function getAll() {
-    return await load();
+    const client = _getClient();
+    const { data, error } = await client
+      .from(SUPABASE_CONFIG.tableName)
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error('Gagal mengambil data: ' + error.message);
+    return data || [];
   }
 
-  return { findByBarcode, getAll, load };
+  /**
+   * Tambah produk baru
+   * @param {object} produk - { barcode, nama, deskripsi, dimensi, berat, harga, model_url, poster_url }
+   */
+  async function insert(produk) {
+    const client = _getClient();
+    const { data, error } = await client
+      .from(SUPABASE_CONFIG.tableName)
+      .insert([produk])
+      .select()
+      .single();
+
+    if (error) throw new Error('Gagal menambah produk: ' + error.message);
+    return data;
+  }
+
+  /**
+   * Update produk berdasarkan id
+   * @param {string} id
+   * @param {object} updates
+   */
+  async function update(id, updates) {
+    const client = _getClient();
+    const { data, error } = await client
+      .from(SUPABASE_CONFIG.tableName)
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error('Gagal update produk: ' + error.message);
+    return data;
+  }
+
+  /**
+   * Hapus produk berdasarkan id
+   * @param {string} id
+   */
+  async function remove(id) {
+    const client = _getClient();
+    const { error } = await client
+      .from(SUPABASE_CONFIG.tableName)
+      .delete()
+      .eq('id', id);
+
+    if (error) throw new Error('Gagal menghapus produk: ' + error.message);
+    return true;
+  }
+
+  /**
+   * Upload file ke Supabase Storage
+   * @param {File} file - File object dari input
+   * @param {string} folder - 'models' atau 'posters'
+   * @returns {string} public URL file
+   */
+  async function uploadFile(file, folder) {
+    const client = _getClient();
+    const ext = file.name.split('.').pop();
+    const filename = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const { error: uploadError } = await client.storage
+      .from(SUPABASE_CONFIG.storageBucket)
+      .upload(filename, file, { upsert: false });
+
+    if (uploadError) throw new Error('Gagal upload file: ' + uploadError.message);
+
+    const { data } = client.storage
+      .from(SUPABASE_CONFIG.storageBucket)
+      .getPublicUrl(filename);
+
+    return data.publicUrl;
+  }
+
+  /**
+   * Hapus file dari Storage berdasarkan public URL
+   * @param {string} publicUrl
+   */
+  async function deleteFile(publicUrl) {
+    try {
+      const client = _getClient();
+      // Ekstrak path dari URL
+      const url = new URL(publicUrl);
+      const pathParts = url.pathname.split(`/storage/v1/object/public/${SUPABASE_CONFIG.storageBucket}/`);
+      if (pathParts.length < 2) return;
+      const filePath = pathParts[1];
+
+      await client.storage.from(SUPABASE_CONFIG.storageBucket).remove([filePath]);
+    } catch (e) {
+      console.warn('[DB] deleteFile warning (non-fatal):', e.message);
+    }
+  }
+
+  // Expose load() agar app.js tidak perlu diubah (backward compatible)
+  async function load() {
+    _getClient(); // Validasi config saja
+    return {};
+  }
+
+  return { findByBarcode, getAll, insert, update, remove, uploadFile, deleteFile, load };
 })();
