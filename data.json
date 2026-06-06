@@ -4,8 +4,8 @@
     "deskripsi": "Kursi kayu jati dengan bantal linen abu-abu. Tinggi dudukan 45cm, cocok untuk ruang tamu modern.",
     "dimensi": "60cm × 60cm × 85cm",
     "berat": "8 kg",
-    "modelUrl": "https://modelviewer.dev/shared-assets/models/Astronaut.glb",
-    "posterUrl": "https://modelviewer.dev/shared-assets/models/Astronaut.webp",
+    "modelUrl": "./assets/kursi_estetik.glb",
+    "posterUrl": "./assets/kursi_preview.jpg",
     "harga": "Rp 1.250.000"
   },
   "8909876543210": {
