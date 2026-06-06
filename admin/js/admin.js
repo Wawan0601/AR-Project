@@ -236,7 +236,6 @@ document.getElementById('product-form').addEventListener('submit', async (e) => 
     }
 
     const payload = {
-      barcode,
       nama,
       deskripsi: document.getElementById('form-deskripsi').value.trim(),
       dimensi: document.getElementById('form-dimensi').value.trim(),
@@ -247,10 +246,11 @@ document.getElementById('product-form').addEventListener('submit', async (e) => 
     };
 
     if (editingId) {
-      await Database.update(editingId, payload);  // editingId = barcode
+      // Tidak perlu sertakan barcode di payload — sudah ada di .eq()
+      await Database.update(editingId, payload);
       showToast('Produk berhasil diperbarui ✓', 'success');
     } else {
-      await Database.insert(payload);
+      await Database.insert({ barcode, ...payload });
       showToast('Produk berhasil ditambahkan ✓', 'success');
     }
 
