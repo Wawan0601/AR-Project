@@ -14,7 +14,7 @@
  */
 
 const SUPABASE_CONFIG = {
-  url: 'https://abcd1234.supabase.co',      // contoh: https://abcdefgh.supabase.co
+  url: 'https://bahqfjmbhwsoplgajkfz.supabase.co',      // contoh: https://abcdefgh.supabase.co
   anonKey: 'eyJhbGc...',     // contoh: eyJhbGci...
 
   // Nama bucket Storage untuk file .glb dan foto produk
