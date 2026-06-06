@@ -74,10 +74,10 @@ function renderTable(products) {
       </td>
       <td>
         <div class="action-buttons">
-          <button class="btn-action" title="Edit" onclick="openEditModal('${p.id}')">
+          <button class="btn-action" title="Edit" onclick="openEditModal('${p.barcode}')">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
-          <button class="btn-action delete" title="Hapus" onclick="openDeleteModal('${p.id}', '${escHtml(p.nama)}')">
+          <button class="btn-action delete" title="Hapus" onclick="openDeleteModal('${p.barcode}', '${escHtml(p.nama)}')">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
           </button>
         </div>
@@ -121,6 +121,9 @@ function openAddModal() {
   document.getElementById('btn-submit-text').textContent = 'Simpan Produk';
   document.getElementById('product-form').reset();
   document.getElementById('form-id').value = '';
+  document.getElementById('form-barcode').readOnly = false;
+  document.getElementById('form-barcode').style.opacity = '1';
+  document.getElementById('form-barcode').title = '';
 
   // Reset file previews
   hideCurrentAsset('model');
@@ -133,11 +136,11 @@ function openAddModal() {
   showModal('modal-overlay');
 }
 
-function openEditModal(id) {
-  const p = allProducts.find(x => x.id === id);
+function openEditModal(barcode) {
+  const p = allProducts.find(x => x.barcode === barcode);
   if (!p) return;
 
-  editingId = id;
+  editingId = barcode;
   pendingModelUrl = null;
   pendingPosterUrl = null;
   removeModelFlag = false;
@@ -145,8 +148,11 @@ function openEditModal(id) {
 
   document.getElementById('modal-title').textContent = 'Edit Produk';
   document.getElementById('btn-submit-text').textContent = 'Simpan Perubahan';
-  document.getElementById('form-id').value = p.id;
+  document.getElementById('form-id').value = p.barcode;
   document.getElementById('form-barcode').value = p.barcode;
+  document.getElementById('form-barcode').readOnly = true;
+  document.getElementById('form-barcode').style.opacity = '0.6';
+  document.getElementById('form-barcode').title = 'Barcode tidak bisa diubah (primary key)';
   document.getElementById('form-nama').value = p.nama;
   document.getElementById('form-deskripsi').value = p.deskripsi || '';
   document.getElementById('form-dimensi').value = p.dimensi || '';
@@ -213,7 +219,7 @@ document.getElementById('product-form').addEventListener('submit', async (e) => 
       modelUrl = null;
     } else if (editingId) {
       // Pertahankan URL lama jika tidak ada perubahan
-      modelUrl = allProducts.find(p => p.id === editingId)?.model_url || null;
+      modelUrl = allProducts.find(p => p.barcode === editingId)?.model_url || null;
     }
 
     // Upload poster jika ada file baru
@@ -226,7 +232,7 @@ document.getElementById('product-form').addEventListener('submit', async (e) => 
     } else if (removePosterFlag) {
       posterUrl = null;
     } else if (editingId) {
-      posterUrl = allProducts.find(p => p.id === editingId)?.poster_url || null;
+      posterUrl = allProducts.find(p => p.barcode === editingId)?.poster_url || null;
     }
 
     const payload = {
@@ -241,7 +247,7 @@ document.getElementById('product-form').addEventListener('submit', async (e) => 
     };
 
     if (editingId) {
-      await Database.update(editingId, payload);
+      await Database.update(editingId, payload);  // editingId = barcode
       showToast('Produk berhasil diperbarui ✓', 'success');
     } else {
       await Database.insert(payload);
@@ -309,8 +315,8 @@ function hideUploadProgress(type) {
 // ===================== DELETE =====================
 let deletingId = null;
 
-function openDeleteModal(id, nama) {
-  deletingId = id;
+function openDeleteModal(barcode, nama) {
+  deletingId = barcode;
   document.getElementById('delete-product-name').textContent = nama;
   showModal('delete-modal-overlay');
 }
@@ -323,11 +329,11 @@ document.getElementById('btn-confirm-delete').addEventListener('click', async ()
 
   try {
     // Hapus file aset dari Storage
-    const p = allProducts.find(x => x.id === deletingId);
+    const p = allProducts.find(x => x.barcode === deletingId);
     if (p?.model_url) await Database.deleteFile(p.model_url);
     if (p?.poster_url) await Database.deleteFile(p.poster_url);
 
-    await Database.remove(deletingId);
+    await Database.remove(deletingId);  // deletingId = barcode
     showToast('Produk berhasil dihapus', 'success');
     closeModal('delete-modal-overlay');
     await loadProducts();
