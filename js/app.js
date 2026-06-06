@@ -14,12 +14,15 @@
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // === PRELOAD DATABASE ===
+  // === PRELOAD DATABASE & ISI HELPER CODES ===
   try {
     await Database.load();
     console.log('[App] Database siap.');
+    await _loadHelperCodes();
   } catch (err) {
     console.error('[App] Gagal load database:', err);
+    const hc = document.getElementById('helper-codes');
+    if (hc) hc.innerHTML = '<p style="font-size:13px;color:var(--text-secondary);">Gagal memuat produk. Periksa koneksi.</p>';
   }
 
   // === INISIALISASI SCANNER ===
@@ -124,6 +127,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 });
+
+
+/**
+ * Isi daftar barcode contoh dari Supabase secara dinamis
+ */
+async function _loadHelperCodes() {
+  const container = document.getElementById('helper-codes');
+  if (!container) return;
+  try {
+    const products = await Database.getAll();
+    if (!products || products.length === 0) {
+      container.innerHTML = '<p style="font-size:13px;color:var(--text-secondary);">Belum ada produk di database.</p>';
+      return;
+    }
+    container.innerHTML = products.slice(0, 5).map(p => `
+      <div class="helper-code" data-barcode="${p.barcode}">
+        <span>${p.barcode}</span>
+        <span class="helper-code-name">${p.nama}</span>
+      </div>
+    `).join('');
+    // Re-attach click listeners
+    container.querySelectorAll('.helper-code').forEach(el => {
+      el.addEventListener('click', () => {
+        const barcode = el.dataset.barcode;
+        if (barcode) {
+          document.getElementById('manual-input').value = barcode;
+          handleBarcode(barcode);
+          document.getElementById('scanner-card').scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    });
+  } catch (e) {
+    container.innerHTML = '<p style="font-size:13px;color:var(--text-secondary);">Gagal memuat produk.</p>';
+  }
+}
 
 /**
  * Handler utama saat barcode berhasil discan atau diinput manual
