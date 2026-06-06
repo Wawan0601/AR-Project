@@ -80,12 +80,12 @@ const Database = (() => {
    * @param {string} id
    * @param {object} updates
    */
-  async function update(id, updates) {
+  async function update(barcode, updates) {
     const client = _getClient();
     const { data, error } = await client
       .from(SUPABASE_CONFIG.tableName)
       .update(updates)
-      .eq('id', id)
+      .eq('barcode', barcode)
       .select()
       .single();
 
@@ -97,12 +97,12 @@ const Database = (() => {
    * Hapus produk berdasarkan id
    * @param {string} id
    */
-  async function remove(id) {
+  async function remove(barcode) {
     const client = _getClient();
     const { error } = await client
       .from(SUPABASE_CONFIG.tableName)
       .delete()
-      .eq('id', id);
+      .eq('barcode', barcode);
 
     if (error) throw new Error('Gagal menghapus produk: ' + error.message);
     return true;
