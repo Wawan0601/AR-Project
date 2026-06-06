@@ -1,19 +1,41 @@
 /**
  * database.js — Single Source of Truth
  * Semua data produk diambil dari data.json.
- * Modul ini menjadi satu-satunya jembatan antara UI dan data.
+ *
+ * FIX: Gunakan path relatif yang benar untuk GitHub Pages subfolder.
+ * document.currentScript tidak bisa dipakai di defer, jadi kita
+ * deteksi base path dari window.location secara otomatis.
  */
 
 const Database = (() => {
-  let _products = null; // Cache produk setelah fetch pertama
+  let _products = null;
 
   /**
-   * Load data dari data.json (hanya sekali, lalu di-cache)
+   * Deteksi base URL otomatis — bekerja di Vercel, GitHub Pages subfolder,
+   * maupun localhost tanpa perlu konfigurasi manual.
    */
+  function _getBaseUrl() {
+    // Ambil path folder dari URL yang sedang dibuka
+    // Contoh: https://wawan0601.github.io/AR-Project/index.html
+    //   → base = https://wawan0601.github.io/AR-Project/
+    const scripts = document.getElementsByTagName('script');
+    for (const s of scripts) {
+      if (s.src && s.src.includes('database.js')) {
+        // database.js ada di /js/database.js → naik 1 level ke root
+        return s.src.replace('/js/database.js', '/');
+      }
+    }
+    // Fallback: pakai lokasi halaman saat ini
+    return window.location.href.replace(/\/[^/]*$/, '/');
+  }
+
   async function load() {
-    if (_products) return _products; // Return cache jika sudah ada
+    if (_products) return _products;
     try {
-      const response = await fetch('./data.json');
+      const base = _getBaseUrl();
+      const url = base + 'data.json';
+      console.log('[DB] Fetching:', url);
+      const response = await fetch(url);
       if (!response.ok) throw new Error(`Gagal memuat data.json: ${response.status}`);
       _products = await response.json();
       console.log(`[DB] Loaded ${Object.keys(_products).length} produk.`);
@@ -24,20 +46,12 @@ const Database = (() => {
     }
   }
 
-  /**
-   * Cari produk berdasarkan barcode
-   * @param {string} barcode - kode barcode yang discan
-   * @returns {object|null} data produk atau null jika tidak ditemukan
-   */
   async function findByBarcode(barcode) {
     const data = await load();
     const trimmed = String(barcode).trim();
     return data[trimmed] || null;
   }
 
-  /**
-   * Dapatkan semua produk (untuk keperluan debug/admin)
-   */
   async function getAll() {
     return await load();
   }
