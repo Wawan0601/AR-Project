@@ -53,7 +53,7 @@ const UI = (() => {
   /**
    * Tampilkan product card dengan data produk
    * @param {string} barcode
-   * @param {object} product - data dari data.json
+   * @param {object} product - data dari Supabase (snake_case fields)
    */
   function showProduct(barcode, product) {
     _currentProduct = product;
@@ -74,8 +74,8 @@ const UI = (() => {
     }
 
     // Poster image
-    if (product.posterUrl) {
-      els.productPoster.src = product.posterUrl;
+    if (product.poster_url) {
+      els.productPoster.src = product.poster_url;
       els.productPoster.classList.remove('hidden');
       els.productPoster.parentElement?.querySelector('.product-poster-placeholder')?.classList.add('hidden');
     }
@@ -96,7 +96,7 @@ const UI = (() => {
     if (!product) product = _currentProduct;
     if (!product) return;
 
-    els.modelViewer.src = product.modelUrl;
+    els.modelViewer.src = product.model_url;
     els.modelViewer.alt = product.nama;
     els.viewerProductName.textContent = product.nama;
     els.viewerSection.classList.remove('hidden');
@@ -117,7 +117,7 @@ const UI = (() => {
     if (!product) product = _currentProduct;
     if (!product) return;
 
-    els.modelViewer.src = product.modelUrl;
+    els.modelViewer.src = product.model_url;
     els.modelViewer.alt = product.nama;
     els.viewerProductName.textContent = product.nama;
 
