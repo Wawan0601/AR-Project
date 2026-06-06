@@ -23,7 +23,7 @@ const SUPABASE_KEY =
   storageBucket: 'produk-assets',
 
   // Nama tabel di database Supabase
-  tableName: 'produk',
+  tableName: 'produk'
 };
 
 // Freeze agar tidak ada yang tidak sengaja mengubahnya
