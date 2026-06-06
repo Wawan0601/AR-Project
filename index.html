@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#F5F0EA" />
   <meta name="description" content="Scan barcode produk dan lihat visualisasi 3D dalam Augmented Reality" />
   
-  <!-- PWA Manifest — pakai path relatif agar bekerja di GitHub Pages subfolder -->
+  <!-- PWA Manifest — path relatif agar bekerja di GitHub Pages subfolder -->
   <link rel="manifest" href="./manifest.json" />
   <link rel="apple-touch-icon" href="./assets/icon-192.png" />
 
@@ -15,7 +15,7 @@
   <!-- Stylesheet -->
   <link rel="stylesheet" href="./css/style.css" />
 
-  <!-- model-viewer tetap di head karena type="module" (non-blocking) -->
+  <!-- model-viewer: type="module" = non-blocking, aman di head -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
 </head>
 
@@ -46,10 +46,9 @@
 
       <!-- Viewport Kamera -->
       <div id="scanner-viewport">
-        <!-- html5-qrcode akan inject video ke sini -->
         <div id="qr-reader"></div>
 
-        <!-- Viewfinder overlay (kotak sudut + garis scan) -->
+        <!-- Viewfinder overlay -->
         <div class="viewfinder">
           <div class="viewfinder-box">
             <div class="viewfinder-corner tl"></div>
@@ -60,10 +59,9 @@
           </div>
         </div>
 
-        <!-- Hint text bawah -->
         <div class="scanner-hint">Posisikan barcode di dalam kotak</div>
 
-        <!-- Idle state (sebelum kamera dibuka) -->
+        <!-- Idle state -->
         <div class="scanner-idle" id="scanner-idle">
           <div class="idle-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -101,10 +99,9 @@
       Mulai Scan Barcode
     </button>
 
-    <!-- === PRODUCT CARD (muncul setelah scan berhasil) === -->
+    <!-- === PRODUCT CARD === -->
     <div class="product-card hidden" id="product-card">
       
-      <!-- Poster Image -->
       <div style="position:relative; overflow:hidden;">
         <img id="product-poster" class="product-poster hidden" alt="Foto produk" loading="lazy" />
         <div class="product-poster-placeholder" id="poster-placeholder">
@@ -116,16 +113,10 @@
       </div>
 
       <div class="product-info">
-        <!-- Tag barcode -->
         <div class="product-barcode-tag" id="product-barcode-tag">Barcode: —</div>
-
-        <!-- Nama produk -->
         <h2 class="product-name" id="product-name">—</h2>
-
-        <!-- Deskripsi -->
         <p class="product-desc" id="product-desc">—</p>
 
-        <!-- Meta chips -->
         <div class="product-meta">
           <div class="meta-chip">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
@@ -137,10 +128,8 @@
           </div>
         </div>
 
-        <!-- Harga -->
         <div class="product-price" id="product-price">—</div>
 
-        <!-- Tombol AR -->
         <button class="btn-ar" id="btn-ar">
           <div class="ar-dot"></div>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -149,7 +138,6 @@
           Lihat di Ruangan Anda (AR)
         </button>
 
-        <!-- Tombol 3D Viewer fallback -->
         <button class="btn-3d-viewer" id="btn-3d-viewer">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
           Lihat 3D Saja (tanpa AR)
@@ -157,7 +145,7 @@
       </div>
     </div>
 
-    <!-- === SCAN LAGI BUTTON === -->
+    <!-- === SCAN LAGI === -->
     <button class="btn-scan-again hidden" id="btn-scan-again">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
@@ -165,7 +153,7 @@
       Scan Produk Lain
     </button>
 
-    <!-- === MODEL VIEWER SECTION === -->
+    <!-- === MODEL VIEWER === -->
     <div class="viewer-section hidden" id="viewer-section">
       <div class="viewer-header">
         <div class="viewer-title">
@@ -177,14 +165,6 @@
         </button>
       </div>
 
-      <!-- 
-        Model Viewer Web Component
-        - ar: aktifkan mode AR
-        - ar-modes: urutan fallback (webxr → scene-viewer Android → quick-look iOS)
-        - camera-controls: izinkan putar model dengan jari
-        - auto-rotate: putar otomatis saat idle
-        - shadow-intensity: bayangan di lantai
-      -->
       <model-viewer
         id="model-viewer"
         src=""
@@ -200,7 +180,6 @@
         exposure="1"
         style="--poster-color: transparent;"
       >
-        <!-- Tombol AR (muncul di dalam model-viewer) -->
         <button slot="ar-button" style="
           position: absolute;
           bottom: 16px;
@@ -221,17 +200,8 @@
           📱 Buka di AR
         </button>
 
-        <!-- Loading indicator -->
-        <div slot="progress-bar" style="
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: 3px;
-          background: #EDE8E1;
-        ">
-          <div style="height: 100%; background: #C8590A; transition: width 0.3s;" 
-               id="model-progress-bar"></div>
+        <div slot="progress-bar" style="position:absolute;bottom:0;left:0;right:0;height:3px;background:#EDE8E1;">
+          <div style="height:100%;background:#C8590A;transition:width 0.3s;" id="model-progress-bar"></div>
         </div>
       </model-viewer>
 
@@ -241,25 +211,15 @@
       </div>
     </div>
 
-    <!-- === HELPER: KODE BARCODE CONTOH === -->
+    <!-- === HELPER BARCODE === -->
     <div class="helper-section">
       <div class="helper-title">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         Coba dengan kode contoh (tap untuk mengisi)
       </div>
-      <div class="helper-codes">
-        <div class="helper-code" data-barcode="8901234567890">
-          <span>8901234567890</span>
-          <span class="helper-code-name">Kursi Estetik Minimalis</span>
-        </div>
-        <div class="helper-code" data-barcode="8909876543210">
-          <span>8909876543210</span>
-          <span class="helper-code-name">Meja Kopi Bulat</span>
-        </div>
-        <div class="helper-code" data-barcode="1234567890128">
-          <span>1234567890128</span>
-          <span class="helper-code-name">Lampu Meja Bambu</span>
-        </div>
+      <div class="helper-codes" id="helper-codes">
+        <!-- Diisi dinamis dari Supabase oleh app.js -->
+        <p style="font-size:13px;color:var(--text-secondary);padding:8px 0;">Memuat produk dari database...</p>
       </div>
     </div>
 
@@ -273,15 +233,17 @@
 
 </div><!-- #app -->
 
-<!-- 
-  JAVASCRIPT — Urutan load PENTING:
-  1. Supabase SDK  → client database online
-  2. supabase-config.js → kredensial (isi dulu sebelum deploy!)
-  3. html5-qrcode  → TANPA defer, harus siap sebelum scanner.js
-  4. database.js   → Single Source of Truth (Supabase edition)
-  5. scanner.js    → depend on html5-qrcode
-  6. ui.js         → depend on DOM elements
-  7. app.js        → orchestrator
+<!--
+  URUTAN SCRIPT — JANGAN DIUBAH!
+  Setiap script bergantung pada yang di atasnya.
+
+  1. @supabase/supabase-js  → library Supabase (WAJIB pertama)
+  2. supabase-config.js     → isi URL & key Supabase Anda di file ini
+  3. html5-qrcode           → library scanner (TANPA defer)
+  4. database.js            → pakai Supabase untuk cari produk
+  5. scanner.js             → pakai html5-qrcode
+  6. ui.js                  → render tampilan
+  7. app.js                 → orchestrator utama
 -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./js/supabase-config.js"></script>
