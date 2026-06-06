@@ -1,0 +1,29 @@
+{
+  "8901234567890": {
+    "nama": "Kursi Estetik Minimalis",
+    "deskripsi": "Kursi kayu jati dengan bantal linen abu-abu. Tinggi dudukan 45cm, cocok untuk ruang tamu modern.",
+    "dimensi": "60cm × 60cm × 85cm",
+    "berat": "8 kg",
+    "modelUrl": "https://modelviewer.dev/shared-assets/models/Astronaut.glb",
+    "posterUrl": "https://modelviewer.dev/shared-assets/models/Astronaut.webp",
+    "harga": "Rp 1.250.000"
+  },
+  "8909876543210": {
+    "nama": "Meja Kopi Bulat",
+    "deskripsi": "Meja kopi kayu solid diameter 60cm dengan kaki besi hitam. Finishing natural water-based.",
+    "dimensi": "Ø 60cm × Tinggi 45cm",
+    "berat": "12 kg",
+    "modelUrl": "https://modelviewer.dev/shared-assets/models/RobotExpressive.glb",
+    "posterUrl": "https://modelviewer.dev/shared-assets/models/RobotExpressive.webp",
+    "harga": "Rp 890.000"
+  },
+  "1234567890128": {
+    "nama": "Lampu Meja Bambu",
+    "deskripsi": "Lampu meja berbahan bambu alami dengan shade kain putih. Daya 15W LED warm white.",
+    "dimensi": "Ø 25cm × Tinggi 55cm",
+    "berat": "1.5 kg",
+    "modelUrl": "https://modelviewer.dev/shared-assets/models/NeilArmstrong.glb",
+    "posterUrl": "https://modelviewer.dev/shared-assets/models/NeilArmstrong.webp",
+    "harga": "Rp 350.000"
+  }
+}

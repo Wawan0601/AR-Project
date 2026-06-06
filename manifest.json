@@ -1,0 +1,22 @@
+{
+  "name": "AR Produk Scanner",
+  "short_name": "AR Produk",
+  "description": "Scan barcode dan lihat produk dalam Augmented Reality",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5F0EA",
+  "theme_color": "#F5F0EA",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
