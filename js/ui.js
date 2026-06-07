@@ -123,8 +123,11 @@ const UI = (() => {
 
     // Aktifkan AR attributes
     els.modelViewer.setAttribute('ar', '');
-    els.modelViewer.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
+    // scene-viewer diutamakan — menggunakan kamera utama (x1) bukan telefoto
+    // webxr sebagai fallback jika scene-viewer tidak tersedia
+    els.modelViewer.setAttribute('ar-modes', 'scene-viewer webxr quick-look');
     els.modelViewer.setAttribute('ar-scale', 'fixed');
+    els.modelViewer.setAttribute('xr-environment', '');
 
     els.viewerSection.classList.remove('hidden');
 
