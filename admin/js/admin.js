@@ -74,6 +74,9 @@ function renderTable(products) {
       </td>
       <td>
         <div class="action-buttons">
+          <button class="btn-action" title="Generate Barcode" onclick="openBarcodeModal('${p.barcode}', '${escHtml(p.nama)}', '${escHtml(p.harga||'')}')">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="4" height="16"/><rect x="7" y="4" width="2" height="16"/><rect x="11" y="4" width="4" height="16"/><rect x="17" y="4" width="2" height="16"/><rect x="21" y="4" width="2" height="16"/></svg>
+          </button>
           <button class="btn-action" title="Edit" onclick="openEditModal('${p.barcode}')">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
@@ -359,6 +362,22 @@ function closeModal(id) {
 
 function setupEventListeners() {
   document.getElementById('btn-tambah-produk').addEventListener('click', openAddModal);
+
+  // Barcode modal
+  document.getElementById('btn-close-barcode').addEventListener('click', () => closeModal('barcode-modal-overlay'));
+  document.getElementById('btn-cancel-barcode').addEventListener('click', () => closeModal('barcode-modal-overlay'));
+  document.getElementById('btn-generate-barcode').addEventListener('click', _generateBarcode);
+  document.getElementById('btn-download-barcode').addEventListener('click', _downloadBarcode);
+  document.getElementById('btn-print-barcode').addEventListener('click', _printBarcode);
+  document.getElementById('barcode-modal-overlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeModal('barcode-modal-overlay');
+  });
+  // Auto-generate saat options berubah
+  document.getElementById('barcode-width').addEventListener('change', _generateBarcode);
+  document.getElementById('barcode-height').addEventListener('change', _generateBarcode);
+  document.getElementById('barcode-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') _generateBarcode();
+  });
   document.getElementById('btn-tambah-empty').addEventListener('click', openAddModal);
   document.getElementById('btn-close-modal').addEventListener('click', () => closeModal('modal-overlay'));
   document.getElementById('btn-cancel-modal').addEventListener('click', () => closeModal('modal-overlay'));
@@ -381,6 +400,170 @@ function showToast(msg, type = '') {
   toast.className = `toast ${type}`;
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.add('hidden'), 3500);
+}
+
+
+// ===================== BARCODE GENERATOR =====================
+let _barcodeProduct = { barcode: '', nama: '', harga: '' };
+
+function openBarcodeModal(barcode, nama, harga) {
+  _barcodeProduct = { barcode, nama, harga };
+
+  // Isi info produk
+  document.getElementById('barcode-product-info').innerHTML = `
+    <div>
+      <div class="barcode-product-info-name">${escHtml(nama)}</div>
+      <div class="barcode-product-info-code">${escHtml(barcode)}</div>
+    </div>
+  `;
+
+  // Isi input barcode
+  document.getElementById('barcode-input').value = barcode;
+  document.getElementById('barcode-label-name').textContent = nama;
+  document.getElementById('barcode-label-price').textContent = harga || '';
+  document.getElementById('barcode-copies').value = 1;
+
+  showModal('barcode-modal-overlay');
+  // Generate otomatis
+  _generateBarcode();
+}
+
+function _generateBarcode() {
+  const code = document.getElementById('barcode-input').value.trim();
+  if (!code) return;
+
+  const width  = parseInt(document.getElementById('barcode-width').value);
+  const height = parseInt(document.getElementById('barcode-height').value);
+
+  try {
+    JsBarcode('#barcode-svg', code, {
+      format: 'CODE128',
+      width,
+      height,
+      displayValue: true,
+      fontSize: 14,
+      margin: 8,
+      background: '#ffffff',
+      lineColor: '#000000',
+    });
+    // Update label jika kode diubah manual
+    document.getElementById('barcode-label-name').textContent =
+      _barcodeProduct.nama || code;
+  } catch (e) {
+    showToast('Format kode tidak valid untuk barcode', 'error');
+  }
+}
+
+function _downloadBarcode() {
+  const svg = document.getElementById('barcode-svg');
+  const code = document.getElementById('barcode-input').value.trim() || 'barcode';
+
+  // Convert SVG → Canvas → PNG
+  const svgData = new XMLSerializer().serializeToString(svg);
+  const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    const padding = 24;
+    canvas.width  = img.width + padding * 2;
+    canvas.height = img.height + padding * 2 + 40; // ruang untuk nama & harga
+
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Nama produk
+    const nama = _barcodeProduct.nama || '';
+    ctx.fillStyle = '#1A1714';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(nama.length > 35 ? nama.substring(0, 35) + '...' : nama,
+                 canvas.width / 2, padding + 16);
+
+    // Barcode image
+    ctx.drawImage(img, padding, padding + 20);
+
+    // Harga
+    const harga = _barcodeProduct.harga || '';
+    if (harga) {
+      ctx.fillStyle = '#6B6259';
+      ctx.font = '12px Arial';
+      ctx.fillText(harga, canvas.width / 2, canvas.height - 10);
+    }
+
+    const link = document.createElement('a');
+    link.download = code + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
+
+function _printBarcode() {
+  const code   = document.getElementById('barcode-input').value.trim();
+  const copies = Math.max(1, Math.min(100, parseInt(document.getElementById('barcode-copies').value) || 1));
+  const nama   = _barcodeProduct.nama || code;
+  const harga  = _barcodeProduct.harga || '';
+  const width  = parseInt(document.getElementById('barcode-width').value);
+  const height = parseInt(document.getElementById('barcode-height').value);
+
+  // Buat window print terpisah
+  const printWin = window.open('', '_blank', 'width=800,height=600');
+  printWin.document.write(`<!DOCTYPE html>
+<html><head>
+<title>Print Barcode — ${escHtml(code)}</title>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: white; padding: 10mm; }
+  .grid { display: flex; flex-wrap: wrap; gap: 6mm; }
+  .label {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 5mm 6mm 3mm;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2mm;
+    break-inside: avoid;
+  }
+  .label-name { font-size: 10pt; font-weight: 600; font-family: Arial; text-align: center; max-width: 60mm; }
+  .label-price { font-size: 8pt; color: #555; font-family: Arial; }
+  svg { max-width: 70mm; }
+  @media print {
+    @page { margin: 8mm; }
+  }
+</style>
+</head><body>
+<div class="grid" id="grid"></div>
+<script>
+  const grid = document.getElementById('grid');
+  for (let i = 0; i < ${copies}; i++) {
+    const label = document.createElement('div');
+    label.className = 'label';
+    label.innerHTML = \`
+      <div class="label-name">${escHtml(nama)}</div>
+      <svg id="bc\${i}"></svg>
+      ${harga ? `<div class="label-price">${escHtml(harga)}</div>` : ''}
+    \`;
+    grid.appendChild(label);
+    JsBarcode('#bc' + i, '${escHtml(code)}', {
+      format: 'CODE128',
+      width: ${width},
+      height: ${height},
+      displayValue: true,
+      fontSize: 12,
+      margin: 6,
+    });
+  }
+  setTimeout(() => { window.print(); window.close(); }, 600);
+<\/script>
+</body></html>`);
+  printWin.document.close();
 }
 
 // ===================== UTILS =====================
